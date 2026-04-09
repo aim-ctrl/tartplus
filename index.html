@@ -3,193 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Juz & Surah Visualisering</title>
+    <title>Koranen - 30 Juz (Baserat på ordantal)</title>
     
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 20px;
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary: #0ea5e9;
         }
 
-        h1 {
-            text-align: center;
-            color: #333;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: var(--text-main); }
+        .header { margin-bottom: 30px; text-align: center; }
+        h1 { margin: 0; font-size: 28px; font-weight: 700; color: var(--text-main); }
+        p.subtitle { margin: 8px 0 0 0; color: var(--text-muted); font-size: 15px; }
 
-        #quran-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px; /* Mellanrum mellan varje Juz */
-            margin-bottom: 30px;
-        }
+        .dashboard { display: flex; gap: 30px; max-width: 1400px; margin: 0 auto; }
+        .left-panel { flex: 2; display: flex; flex-direction: column; gap: 6px; padding-left: 40px; }
 
         .juz-row {
-            display: flex;
-            width: 100%;
-            height: 35px;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex; width: 100%; height: 26px; background-color: #e0e0e0;
+            border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative;
+        }
+
+        .juz-label {
+            position: absolute; left: -40px; top: 6px; font-size: 11px; font-weight: 700; color: var(--text-muted);
         }
 
         .surah-segment {
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            border-right: 1px solid rgba(255, 255, 255, 0.3);
-            transition: opacity 0.2s, transform 0.1s;
-            white-space: nowrap;
-            overflow: hidden;
+            height: 100%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 10px; font-weight: 600; cursor: pointer;
+            border-right: 1px solid rgba(255, 255, 255, 0.3); transition: opacity 0.2s, filter 0.2s;
+            white-space: nowrap; overflow: hidden;
         }
-
-        .surah-segment:hover {
-            opacity: 0.85;
-            transform: scaleY(1.1);
-        }
-
-        .surah-segment:last-child {
-            border-right: none;
-        }
-
-        /* Panel för statistik */
-        #stats-panel {
-            display: none;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            border-left: 5px solid #4A90E2;
-            position: sticky;
-            bottom: 20px;
-        }
-
-        #stats-panel h2 {
-            margin-top: 0;
-            color: #4A90E2;
-        }
+        .surah-segment:hover { opacity: 0.9; filter: brightness(1.15); }
+        .surah-segment:last-child { border-right: none; }
+        
+        .right-panel { flex: 1; min-width: 320px; position: sticky; top: 20px; height: fit-content; }
+        .card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 30px; border: 1px solid var(--border-color); }
+        .card h3 { margin-top: 0; font-size: 22px; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 15px; margin-bottom: 20px;}
+        .stat-row { margin-bottom: 16px; }
+        .stat-label { font-weight: 600; color: var(--text-muted); display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 17px; color: var(--text-main); margin-top: 4px; font-weight: 500;}
+        
+        /* En liten tagg för att visa ord-ikon */
+        .word-tag { display: inline-block; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 12px; font-size: 14px; font-weight: 600; margin-top: 4px;}
     </style>
 </head>
 <body>
 
+<div class="header">
     <h1>Koranens 30 Juz</h1>
-    
-    <div id="quran-container">
+    <p class="subtitle">Bredden på varje färgsegment är proportionerlig mot <strong>ordantalet</strong> i den delen av kapitlet.</p>
+</div>
+
+<div class="dashboard">
+    <div class="left-panel" id="quran-container">
         </div>
 
-    <div id="stats-panel">
-        <h2 id="surah-title">Klicka på ett segment</h2>
-        <p id="surah-info"></p>
+    <div class="right-panel">
+        <div class="card" id="stats-panel">
+            <h3 id="surah-title">Klicka på ett kapitel</h3>
+            
+            <div class="stat-row">
+                <span class="stat-label">Betydelse</span>
+                <div class="stat-value" id="surah-meaning">-</div>
+            </div>
+            
+            <div class="stat-row">
+                <span class="stat-label">Totalt antal ord (Hela kapitlet)</span>
+                <div class="word-tag" id="surah-words">-</div>
+            </div>
+            
+            <div class="stat-row">
+                <span class="stat-label">Uppenbarelseplats</span>
+                <div class="stat-value" id="surah-revelation">-</div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <py-script>
-        import js
-        from pyodide.ffi import create_proxy
+<script type="py">
+    import js
+    from pyscript import document
+    from pyodide.ffi import create_proxy
 
-        # --- DATASTRUKTUR ---
-        # Data över vilka kapitel som ligger i varje Juz, samt hur många verser (v) de utgör av just den Juz:en.
-        juz_data = [
-            # Juz 1: Al-Fatihah (7 verser) + Al-Baqarah (141 verser) = 148 totalt
-            [{"id": 1, "name": "1. Al-Fatihah", "v": 7}, {"id": 2, "name": "2. Al-Baqarah", "v": 141}],
-            
-            # Juz 2: Fortsättning på Al-Baqarah (111 verser)
-            [{"id": 2, "name": "2. Al-Baqarah", "v": 111}],
-            
-            # Juz 3: Slutet på Al-Baqarah (34 verser) + Aal-E-Imran (92 verser)
-            [{"id": 2, "name": "2. Al-Baqarah", "v": 34}, {"id": 3, "name": "3. Aal-E-Imran", "v": 92}],
-        ]
+    # Färgpalett för visualiseringen
+    colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f43f5e", "#84cc16", "#0ea5e9", "#eab308"]
 
-        # Fyller ut Juz 4 till 30 med platshållardata för att visualiseringen ska fungera direkt
-        for i in range(4, 31):
-            juz_data.append([{"id": i, "name": f"Surah {i}", "v": 100}])
+    # 1. DATABAS: Alla 114 kapitel (ID | Namn | Betydelse | Plats | Ordantal)
+    # Formaterad som en sträng för att spara plats och göra det lätt för dig att redigera.
+    surahs_raw_data = """
+    1|Al-Fatihah|Öppningen|Mekka|29
+    2|Al-Baqarah|Kon|Medina|6144
+    3|Aal-E-Imran|Imrans Ätt|Medina|3480
+    4|An-Nisa|Kvinnorna|Medina|3745
+    5|Al-Ma'idah|Bordet|Medina|2804
+    6|Al-An'am|Boskapen|Mekka|3055
+    7|Al-A'raf|Höjderna|Mekka|3320
+    8|Al-Anfal|Krigsbytet|Medina|1236
+    9|At-Tawbah|Ångern|Medina|2497
+    10|Yunus|Jona|Mekka|1832
+    11|Hud|Hud|Mekka|1915
+    12|Yusuf|Josef|Mekka|1766
+    13|Ar-Ra'd|Åskan|Medina|855
+    14|Ibrahim|Abraham|Mekka|826
+    15|Al-Hijr|Klippdalen|Mekka|654
+    16|An-Nahl|Biet|Mekka|1841
+    17|Al-Isra|Den Nattliga Resan|Mekka|1533
+    18|Al-Kahf|Grottan|Mekka|1579
+    19|Maryam|Maria|Mekka|962
+    20|Ta-Ha|Ta-Ha|Mekka|1341
+    21|Al-Anbiya|Profeterna|Mekka|1168
+    22|Al-Hajj|Vallfärden|Medina|1291
+    23|Al-Mu'minun|De Troende|Mekka|1040
+    24|An-Nur|Ljuset|Medina|1316
+    25|Al-Furqan|Måttstocken|Mekka|892
+    26|Ash-Shu'ara|Poeterna|Mekka|1319
+    27|An-Naml|Myrorna|Mekka|1149
+    28|Al-Qasas|Berättelsen|Mekka|1441
+    29|Al-'Ankabut|Spindeln|Mekka|980
+    30|Ar-Rum|Romarna|Mekka|819
+    31|Luqman|Luqman|Mekka|542
+    32|As-Sajdah|Bönfallet|Mekka|370
+    33|Al-Ahzab|De Förbundna|Medina|1280
+    34|Saba|Saba|Mekka|883
+    35|Fatir|Skaparen|Mekka|777
+    36|Ya-Sin|Ya-Sin|Mekka|729
+    37|As-Saffat|De i Rader Stående|Mekka|861
+    38|Sad|Sad|Mekka|732
+    39|Az-Zumar|Skarorna|Mekka|1172
+    40|Ghafir|Den Förlåtande|Mekka|1199
+    41|Fussilat|De Väl Uttydda|Mekka|796
+    42|Ash-Shura|Samråd|Mekka|866
+    43|Az-Zukhruf|Gulddekorationerna|Mekka|833
+    44|Ad-Dukhan|Röken|Mekka|346
+    45|Al-Jathiyah|Den Knäböjande|Mekka|488
+    46|Al-Ahqaf|Sanddynerna|Mekka|644
+    47|Muhammad|Muhammed|Medina|539
+    48|Al-Fath|Segern|Medina|560
+    49|Al-Hujurat|De Inre Rummen|Medina|343
+    50|Qaf|Qaf|Mekka|373
+    51|Ad-Dhariyat|De Virvlande Vindarna|Mekka|360
+    52|At-Tur|Berget|Mekka|312
+    53|An-Najm|Stjärnan|Mekka|360
+    54|Al-Qamar|Månen|Mekka|342
+    55|Ar-Rahman|Den Nåderike|Medina|351
+    56|Al-Waqi'ah|Det Oundvikliga|Mekka|378
+    57|Al-Hadid|Järnet|Medina|544
+    58|Al-Mujadila|Hon som Väjsar|Medina|473
+    59|Al-Hashr|Mönstringen|Medina|445
+    60|Al-Mumtahanah|Den Prövade|Medina|348
+    61|As-Saff|Ledet|Medina|221
+    62|Al-Jumu'ah|Fredagsbönen|Medina|180
+    63|Al-Munafiqun|Hycklarna|Medina|180
+    64|At-Taghabun|Avslöjandet|Medina|241
+    65|At-Talaq|Skilsmässan|Medina|248
+    66|At-Tahrim|Förbudet|Medina|247
+    67|Al-Mulk|Herraväldet|Mekka|330
+    68|Al-Qalam|Pennan|Mekka|300
+    69|Al-Haqqah|Den Oundvikliga Sanningen|Mekka|256
+    70|Al-Ma'arij|Vägarna Uppåt|Mekka|216
+    71|Nuh|Noa|Mekka|227
+    72|Al-Jinn|Djinnerna|Mekka|285
+    73|Al-Muzzammil|Den Insvepte|Mekka|285
+    74|Al-Muddaththir|Den Övertäckte|Mekka|255
+    75|Al-Qiyamah|Uppståndelsen|Mekka|164
+    76|Al-Insan|Människan|Medina|240
+    77|Al-Mursalat|De Utsända|Mekka|181
+    78|An-Naba|Tillkännagivandet|Mekka|173
+    79|An-Nazi'at|De som River Ut|Mekka|179
+    80|'Abasa|Han Rynkade Pannan|Mekka|133
+    81|At-Takwir|Lindandet|Mekka|104
+    82|Al-Infitar|Klyvningen|Mekka|81
+    83|Al-Mutaffifin|De som Fuskar|Mekka|169
+    84|Al-Inshiqaq|Rämnandet|Mekka|107
+    85|Al-Buruj|Stjärnbilderna|Mekka|109
+    86|At-Tariq|Nattstjärnan|Mekka|61
+    87|Al-A'la|Den Högste|Mekka|72
+    88|Al-Ghashiyah|Det Överskuggande|Mekka|92
+    89|Al-Fajr|Gryningen|Mekka|139
+    90|Al-Balad|Staden|Mekka|82
+    91|Ash-Shams|Solen|Mekka|54
+    92|Al-Layl|Natten|Mekka|71
+    93|Ad-Duhaa|Förmiddagen|Mekka|40
+    94|Ash-Sharh|Öppnandet|Mekka|27
+    95|At-Tin|Fikonet|Mekka|34
+    96|Al-'Alaq|Grodden|Mekka|72
+    97|Al-Qadr|Allmaktens Natt|Mekka|30
+    98|Al-Bayyinah|Det Klara Beviset|Medina|94
+    99|Az-Zalzalah|Skalvet|Medina|35
+    100|Al-'Adiyat|De Galopperande|Mekka|40
+    101|Al-Qari'ah|Det Hårda Slaget|Mekka|36
+    102|At-Takathur|Tävlan om Mer|Mekka|28
+    103|Al-'Asr|Tiden|Mekka|14
+    104|Al-Humazah|Baktalaren|Mekka|33
+    105|Al-Fil|Elefanten|Mekka|23
+    106|Quraysh|Quraysh|Mekka|17
+    107|Al-Ma'un|Småsaker|Mekka|25
+    108|Al-Kawthar|Överflödet|Mekka|10
+    109|Al-Kafirun|Förnekarna|Mekka|26
+    110|An-Nasr|Hjälpen|Medina|19
+    111|Al-Masad|Palmfibrerna|Mekka|23
+    112|Al-Ikhlas|Den Rena Tron|Mekka|15
+    113|Al-Falaq|Gryningsljuset|Mekka|23
+    114|An-Nas|Människorna|Mekka|20
+    """
 
-        # Databas med statistik för kapitlen (som visas vid klick)
-        surah_stats = {
-            1: {"name": "Al-Fatihah", "meaning": "Öppningen", "total_verses": 7, "revelation": "Mekka"},
-            2: {"name": "Al-Baqarah", "meaning": "Kon", "total_verses": 286, "revelation": "Medina"},
-            3: {"name": "Aal-E-Imran", "meaning": "Imrans Ätt", "total_verses": 200, "revelation": "Medina"}
+    # Omvandla strängen till en användbar Python-ordbok (Dictionary)
+    surah_db = {}
+    for line in surahs_raw_data.strip().split('\n'):
+        parts = line.split('|')
+        surah_id = int(parts[0].strip())
+        surah_db[surah_id] = {
+            "name": parts[1].strip(),
+            "meaning": parts[2].strip(),
+            "revelation": parts[3].strip(),
+            "words": int(parts[4].strip())
         }
 
-        # Färger för att särskilja kapitlen
-        colors = ["#4A90E2", "#50E3C2", "#F5A623", "#D0021B", "#8B572A", "#9B59B6", "#34495E", "#16A085", "#27AE60", "#2980B9"]
+    # 2. UPPDELNINGEN PER JUZ (Surah ID, Ordantal i denna specifika Juz)
+    # En Juz är i genomsnitt ~2580 ord.
+    juz_splits = [
+        [(1, 29), (2, 2550)], # Juz 1
+        [(2, 2550)],          # Juz 2
+        [(2, 1044), (3, 1500)], # Juz 3
+        [(3, 1400), (4, 1100)], # Juz 4
+        [(4, 1500)],          # Juz 5
+        [(4, 1145), (5, 1400)], # Juz 6
+        [(5, 1404), (6, 1100)], # Juz 7
+        [(6, 1300), (7, 1250)], # Juz 8
+        [(7, 1400), (8, 1150)], # Juz 9
+        [(8, 86), (9, 2497)],   # Juz 10
+        [(10, 1832), (11, 750)],# Juz 11
+        [(11, 1165), (12, 1400)],# Juz 12
+        [(12, 366), (13, 855), (14, 826), (15, 500)], # Juz 13
+        [(15, 154), (16, 1841)], # Juz 14
+        [(17, 1533), (18, 1000)],# Juz 15
+        [(18, 579), (19, 962), (20, 1000)], # Juz 16
+        [(20, 341), (21, 1168), (22, 1000)],# Juz 17
+        [(22, 291), (23, 1040), (24, 1316), (25, 200)], # Juz 18
+        [(25, 692), (26, 1319), (27, 600)], # Juz 19
+        [(27, 549), (28, 1441), (29, 600)], # Juz 20
+        [(29, 380), (30, 819), (31, 542), (32, 370), (33, 400)], # Juz 21
+        [(33, 880), (34, 883), (35, 777), (36, 100)], # Juz 22
+        [(36, 629), (37, 861), (38, 732), (39, 400)], # Juz 23
+        [(39, 772), (40, 1199), (41, 600)], # Juz 24
+        [(41, 196), (42, 866), (43, 833), (44, 346), (45, 488)], # Juz 25
+        [(46, 644), (47, 539), (48, 560), (49, 343), (50, 373), (51, 100)], # Juz 26
+        [(51, 260), (52, 312), (53, 360), (54, 342), (55, 351), (56, 378), (57, 544)], # Juz 27
+        [(58, 473), (59, 445), (60, 348), (61, 221), (62, 180), (63, 180), (64, 241), (65, 248), (66, 247)], # Juz 28
+        [(67, 330), (68, 300), (69, 256), (70, 216), (71, 227), (72, 285), (73, 285), (74, 255), (75, 164), (76, 240), (77, 181)], # Juz 29
+        # Juz 30 (Surah 78 till 114)
+        [(78, 173), (79, 179), (80, 133), (81, 104), (82, 81), (83, 169), (84, 107), (85, 109), (86, 61), (87, 72), (88, 92), (89, 139), (90, 82), (91, 54), (92, 71), (93, 40), (94, 27), (95, 34), (96, 72), (97, 30), (98, 94), (99, 35), (100, 40), (101, 36), (102, 28), (103, 14), (104, 33), (105, 23), (106, 17), (107, 25), (108, 10), (109, 26), (110, 19), (111, 23), (112, 15), (113, 23), (114, 20)]
+    ]
 
-        # --- LOGIK ---
+    # --- LOGIK ---
+    def on_surah_click(event):
+        # Läs av ID från elementet vi klickade på
+        surah_id = int(event.target.getAttribute("data-id"))
+        stats = surah_db.get(surah_id)
         
-        # Funktion som körs när användaren klickar på ett segment
-        def show_stats(event):
-            # Hämta ID från det klickade HTML-elementet
-            surah_id = int(event.target.getAttribute("data-id"))
-            
-            # Hämta statistik, eller visa standardtext om det saknas i vår demo-databas
-            stats = surah_stats.get(surah_id, {
-                "name": f"Kapitel {surah_id}", 
-                "meaning": "Ej inlagd", 
-                "total_verses": "Okänt", 
-                "revelation": "Okänt"
-            })
-            
-            # Uppdatera HTML i statistiken
-            js.document.getElementById("surah-title").innerText = f"{surah_id}. {stats['name']}"
-            js.document.getElementById("surah-info").innerHTML = (
-                f"<strong>Betydelse:</strong> {stats['meaning']} <br>"
-                f"<strong>Totalt antal verser (hela kapitlet):</strong> {stats['total_verses']} <br>"
-                f"<strong>Uppenbarelseplats:</strong> {stats['revelation']}"
-            )
-            
-            # Gör panelen synlig
-            js.document.getElementById("stats-panel").style.display = "block"
+        # Uppdatera UI
+        document.querySelector("#surah-title").innerText = f"{surah_id}. {stats['name']}"
+        document.querySelector("#surah-meaning").innerText = stats['meaning']
+        document.querySelector("#surah-words").innerText = f"{stats['words']} ord"
+        document.querySelector("#surah-revelation").innerText = stats['revelation']
 
-        # PyScript behöver en proxy för att koppla Python-funktioner till JavaScript-händelser
-        click_proxy = create_proxy(show_stats)
+    click_proxy = create_proxy(on_surah_click)
+    container = document.querySelector("#quran-container")
 
-        # Bygg DOM (HTML-elementen) för alla 30 Juz
-        container = js.document.getElementById("quran-container")
-
-        for juz_index, juz in enumerate(juz_data):
-            # Räkna ut totala antalet verser i denna Juz för att kunna beräkna procent
-            total_verses_in_juz = sum(segment["v"] for segment in juz)
+    # Bygg HTML dynamiskt
+    for juz_index, surahs_in_juz in enumerate(juz_splits):
+        
+        # Räkna totala ord i just denna Juz för att beräkna procentsats
+        total_words_in_juz = sum(words for surah_id, words in surahs_in_juz)
+        
+        row = js.document.createElement("div")
+        row.className = "juz-row"
+        
+        label = js.document.createElement("span")
+        label.className = "juz-label"
+        label.innerText = f"J{juz_index + 1}"
+        row.appendChild(label)
+        
+        for surah_id, word_count in surahs_in_juz:
+            segment = js.document.createElement("div")
+            segment.className = "surah-segment"
             
-            # Skapa en rad (Rektangeln för en Juz)
-            row = js.document.createElement("div")
-            row.className = "juz-row"
-            row.title = f"Juz {juz_index + 1}"
+            # Bredden är antal ord / totala ord i raden
+            percentage_width = (word_count / total_words_in_juz) * 100
+            segment.style.width = f"{percentage_width}%"
             
-            # Gå igenom varje kapitel-segment i denna Juz
-            for surah in juz:
-                segment = js.document.createElement("div")
-                segment.className = "surah-segment"
-                
-                # Beräkna bredden i procent baserat på antalet verser
-                percentage_width = (surah["v"] / total_verses_in_juz) * 100
-                segment.style.width = f"{percentage_width}%"
-                
-                # Sätt färg baserat på ID så att samma kapitel får samma färg oavsett Juz
-                color_index = surah["id"] % len(colors)
-                segment.style.backgroundColor = colors[color_index]
-                
-                # Lägg till text och attribut
-                segment.innerText = surah["name"]
-                segment.setAttribute("data-id", str(surah["id"]))
-                
-                # Koppla klick-händelsen
-                segment.addEventListener("click", click_proxy)
-                
-                # Lägg in segmentet i Juz-raden
-                row.appendChild(segment)
-                
-            # Lägg in hela Juz-raden i vår huvudbehållare
-            container.appendChild(row)
+            # Färg (samma kapitel får alltid samma färg!)
+            segment.style.backgroundColor = colors[surah_id % len(colors)]
+            
+            # Hämta namn från databasen (om segmentet är brett nog visas texten)
+            surah_name = surah_db[surah_id]["name"]
+            segment.innerText = surah_name
+            segment.title = f"{surah_name} ({word_count} ord i denna Juz)"
+            
+            segment.setAttribute("data-id", str(surah_id))
+            segment.addEventListener("click", click_proxy)
+            
+            row.appendChild(segment)
+            
+        container.appendChild(row)
+</script>
 
-    </py-script>
 </body>
 </html>
