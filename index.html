@@ -3,165 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Koranen - Standard Madani (Fixad Font)</title>
+    <title>Juz & Surah Visualisering</title>
     
-    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
-    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
 
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212; 
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
             margin: 0;
+            padding: 20px;
         }
 
-        #mushaf-container {
-            width: 100%;
-            max-width: 600px;
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        #quran-container {
             display: flex;
             flex-direction: column;
-            min-height: 80vh;
-        }
-
-        .mushaf-header {
-            display: flex;
-            justify-content: space-between;
-            color: #d1d5db;
-            font-size: 14px;
+            gap: 8px; /* Mellanrum mellan varje Juz */
             margin-bottom: 30px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #333;
         }
 
-        .quran-text {
-            font-family: 'QuranPageFont', sans-serif; 
-            font-size: 42px; 
-            line-height: 1.8;
-            text-align: center;
-            direction: rtl; 
-            word-wrap: break-word;
-            flex-grow: 1;
-        }
-
-        .mushaf-footer {
-            text-align: right;
-            color: #d1d5db;
-            font-size: 16px;
-            margin-top: 30px;
-            padding-top: 10px;
-        }
-
-        .controls {
-            margin-top: 30px;
+        .juz-row {
             display: flex;
-            gap: 15px;
+            width: 100%;
+            height: 35px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .surah-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
             justify-content: center;
-        }
-
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #2c2c2e;
             color: white;
-            border: 1px solid #444;
-            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            border-right: 1px solid rgba(255, 255, 255, 0.3);
+            transition: opacity 0.2s, transform 0.1s;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
-        button:hover {
-            background-color: #3a3a3c;
+        .surah-segment:hover {
+            opacity: 0.85;
+            transform: scaleY(1.1);
+        }
+
+        .surah-segment:last-child {
+            border-right: none;
+        }
+
+        /* Panel för statistik */
+        #stats-panel {
+            display: none;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border-left: 5px solid #4A90E2;
+            position: sticky;
+            bottom: 20px;
+        }
+
+        #stats-panel h2 {
+            margin-top: 0;
+            color: #4A90E2;
         }
     </style>
-    
-    <style id="dynamic-font-style"></style>
-
 </head>
 <body>
 
-    <div id="mushaf-container">
-        <div class="mushaf-header">
-            <span id="surah-name">Al-Baqarah</span>
-            <span id="juz-hizb">Juz 1 ◑ Hizb 1</span>
+    <h1>Koranens 30 Juz</h1>
+    
+    <div id="quran-container">
         </div>
 
-        <div id="quran-content" class="quran-text">
-            <span style="font-family: Arial; font-size: 16px; color: #888;">Laddar text och font...</span>
-        </div>
-
-        <div class="mushaf-footer">
-            <span id="page-number">3</span>
-        </div>
+    <div id="stats-panel">
+        <h2 id="surah-title">Klicka på ett segment</h2>
+        <p id="surah-info"></p>
     </div>
 
-    <div class="controls">
-        <button py-click="next_page">Nästa sida &rarr;</button>
-        <button py-click="prev_page">&larr; Föregående sida</button>
-    </div>
+    <py-script>
+        import js
+        from pyodide.ffi import create_proxy
 
-    <script type="py">
-        import asyncio
-        from pyodide.http import pyfetch
-        from pyscript import document
-
-        current_page = 3
-
-        def update_font_for_page(page_num):
-            # ANVÄNDER QURAN.COMS OFFICIELLA WOFF2-FONTER (Mycket mer stabilt!)
-            font_url = f"https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/v1/woff2/p{page_num}.woff2"
+        # --- DATASTRUKTUR ---
+        # Data över vilka kapitel som ligger i varje Juz, samt hur många verser (v) de utgör av just den Juz:en.
+        juz_data = [
+            # Juz 1: Al-Fatihah (7 verser) + Al-Baqarah (141 verser) = 148 totalt
+            [{"id": 1, "name": "1. Al-Fatihah", "v": 7}, {"id": 2, "name": "2. Al-Baqarah", "v": 141}],
             
-            css_rule = f"""
-            @font-face {{
-                font-family: 'QuranPageFont';
-                src: url('{font_url}') format('woff2');
-                font-display: block;
-            }}
-            """
-            document.getElementById("dynamic-font-style").innerHTML = css_rule
-
-        async def fetch_and_display_page(page_num):
-            content_div = document.getElementById("quran-content")
-            document.getElementById("page-number").innerText = str(page_num)
+            # Juz 2: Fortsättning på Al-Baqarah (111 verser)
+            [{"id": 2, "name": "2. Al-Baqarah", "v": 111}],
             
-            # 1. Applicera fonten
-            update_font_for_page(page_num)
+            # Juz 3: Slutet på Al-Baqarah (34 verser) + Aal-E-Imran (92 verser)
+            [{"id": 2, "name": "2. Al-Baqarah", "v": 34}, {"id": 3, "name": "3. Aal-E-Imran", "v": 92}],
+        ]
+
+        # Fyller ut Juz 4 till 30 med platshållardata för att visualiseringen ska fungera direkt
+        for i in range(4, 31):
+            juz_data.append([{"id": i, "name": f"Surah {i}", "v": 100}])
+
+        # Databas med statistik för kapitlen (som visas vid klick)
+        surah_stats = {
+            1: {"name": "Al-Fatihah", "meaning": "Öppningen", "total_verses": 7, "revelation": "Mekka"},
+            2: {"name": "Al-Baqarah", "meaning": "Kon", "total_verses": 286, "revelation": "Medina"},
+            3: {"name": "Aal-E-Imran", "meaning": "Imrans Ätt", "total_verses": 200, "revelation": "Medina"}
+        }
+
+        # Färger för att särskilja kapitlen
+        colors = ["#4A90E2", "#50E3C2", "#F5A623", "#D0021B", "#8B572A", "#9B59B6", "#34495E", "#16A085", "#27AE60", "#2980B9"]
+
+        # --- LOGIK ---
+        
+        # Funktion som körs när användaren klickar på ett segment
+        def show_stats(event):
+            # Hämta ID från det klickade HTML-elementet
+            surah_id = int(event.target.getAttribute("data-id"))
             
-            try:
-                # 2. Hämta V1-koderna (Standard Madani)
-                url = f"https://api.quran.com/api/v4/verses/by_page/{page_num}?words=true&word_fields=code_v1"
-                response = await pyfetch(url)
-                data = await response.json()
+            # Hämta statistik, eller visa standardtext om det saknas i vår demo-databas
+            stats = surah_stats.get(surah_id, {
+                "name": f"Kapitel {surah_id}", 
+                "meaning": "Ej inlagd", 
+                "total_verses": "Okänt", 
+                "revelation": "Okänt"
+            })
+            
+            # Uppdatera HTML i statistiken
+            js.document.getElementById("surah-title").innerText = f"{surah_id}. {stats['name']}"
+            js.document.getElementById("surah-info").innerHTML = (
+                f"<strong>Betydelse:</strong> {stats['meaning']} <br>"
+                f"<strong>Totalt antal verser (hela kapitlet):</strong> {stats['total_verses']} <br>"
+                f"<strong>Uppenbarelseplats:</strong> {stats['revelation']}"
+            )
+            
+            # Gör panelen synlig
+            js.document.getElementById("stats-panel").style.display = "block"
+
+        # PyScript behöver en proxy för att koppla Python-funktioner till JavaScript-händelser
+        click_proxy = create_proxy(show_stats)
+
+        # Bygg DOM (HTML-elementen) för alla 30 Juz
+        container = js.document.getElementById("quran-container")
+
+        for juz_index, juz in enumerate(juz_data):
+            # Räkna ut totala antalet verser i denna Juz för att kunna beräkna procent
+            total_verses_in_juz = sum(segment["v"] for segment in juz)
+            
+            # Skapa en rad (Rektangeln för en Juz)
+            row = js.document.createElement("div")
+            row.className = "juz-row"
+            row.title = f"Juz {juz_index + 1}"
+            
+            # Gå igenom varje kapitel-segment i denna Juz
+            for surah in juz:
+                segment = js.document.createElement("div")
+                segment.className = "surah-segment"
                 
-                page_html = ""
-                for verse in data['verses']:
-                    for word in verse['words']:
-                        if 'code_v1' in word:
-                            page_html += word['code_v1']
+                # Beräkna bredden i procent baserat på antalet verser
+                percentage_width = (surah["v"] / total_verses_in_juz) * 100
+                segment.style.width = f"{percentage_width}%"
                 
-                content_div.innerHTML = page_html
+                # Sätt färg baserat på ID så att samma kapitel får samma färg oavsett Juz
+                color_index = surah["id"] % len(colors)
+                segment.style.backgroundColor = colors[color_index]
                 
-            except Exception as e:
-                content_div.innerHTML = f"<p style='color: #ff6b6b; font-family: Arial; font-size: 16px;'>Kunde inte ladda: {str(e)}</p>"
+                # Lägg till text och attribut
+                segment.innerText = surah["name"]
+                segment.setAttribute("data-id", str(surah["id"]))
+                
+                # Koppla klick-händelsen
+                segment.addEventListener("click", click_proxy)
+                
+                # Lägg in segmentet i Juz-raden
+                row.appendChild(segment)
+                
+            # Lägg in hela Juz-raden i vår huvudbehållare
+            container.appendChild(row)
 
-        def next_page(event):
-            global current_page
-            if current_page > 1:
-                current_page -= 1
-                asyncio.ensure_future(fetch_and_display_page(current_page))
-
-        def prev_page(event):
-            global current_page
-            if current_page < 604:
-                current_page += 1
-                asyncio.ensure_future(fetch_and_display_page(current_page))
-
-        # Starta
-        asyncio.ensure_future(fetch_and_display_page(current_page))
-    </script>
-
+    </py-script>
 </body>
 </html>
