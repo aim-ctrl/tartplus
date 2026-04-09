@@ -18,29 +18,32 @@
             --primary: #0ea5e9;
         }
 
-        /* Tvingar sidan att ta exakt hela skärmen, varken mer eller mindre */
+        * {
+            box-sizing: border-box;
+        }
+
         body { 
             font-family: 'Inter', sans-serif; 
             background-color: var(--bg-color); 
             margin: 0; 
             padding: 0; 
-            height: 100dvh; /* dvh = dynamic viewport height (bättre på mobil) */
+            height: 100dvh;
             display: flex; 
             flex-direction: column;
-            overflow: hidden; /* Förhindrar skrollning utanför */
+            overflow: hidden;
         }
 
-        /* Huvudbehållaren som fyller hela skärmen nu när rubriken är borta */
         #quran-container { 
-            flex: 1; /* Tar all höjd */
+            flex: 1;
             display: flex; 
             flex-direction: column; 
-            padding: 10px;
+            padding: 8px;
             gap: 4px;
             background-color: #f1f5f9;
+            width: 100%;
+            overflow: hidden;
         }
 
-        /* Varje Juz-rad delar lika på utrymmet på höjden */
         .juz-row {
             flex: 1; 
             display: flex; 
@@ -51,17 +54,16 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
-        /* Label (J1, J2) tar en fast bredd, resten blir klickbara segment */
         .juz-label {
-            flex: 0 0 25px;
+            flex: 0 0 30px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #cbd5e1;
-            font-size: 11px; 
+            font-size: 10px; 
             font-weight: 700; 
             color: #334155;
-            border-right: 1px solid white;
+            border-right: 1px solid rgba(255,255,255,0.5);
         }
 
         .segments-container {
@@ -69,9 +71,9 @@
             display: flex;
             width: 100%;
             height: 100%;
+            overflow: hidden;
         }
 
-        /* Segmentens utseende */
         .surah-segment {
             height: 100%; 
             display: flex; 
@@ -80,27 +82,26 @@
             color: white; 
             font-weight: 600; 
             cursor: pointer;
-            border-right: 1px solid rgba(255, 255, 255, 0.1); 
+            /* Inset shadow istället för border för att inte ta upp bredd-pixlar */
+            box-shadow: inset -1px 0 0 0 rgba(255, 255, 255, 0.2); 
             transition: filter 0.2s;
-            font-size: clamp(6px, 1.5vw, 12px); /* Något mindre minimum för mobil */
+            font-size: clamp(6px, 1.2vw, 12px);
             padding: 0;
             text-align: center;
-            
-            /* Dessa tre rader löser problemet på mobilen */
-            flex-shrink: 1;    /* Tillåt segmentet att krympa */
-            min-width: 0;      /* Tillåt segmentet att vara mindre än texten */
-            overflow: hidden;  /* Klipp text som inte får plats */
-            white-space: nowrap; 
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: clip;
+            min-width: 1px; /* Säkerställer att även minsta suran syns */
+            flex-shrink: 1;
         }
-        .surah-segment:hover { filter: brightness(1.15); }
-        .surah-segment:last-child { border-right: none; }
         
-        /* POPUP (Modal) Styling */
+        .surah-segment:hover { filter: brightness(1.15); }
+        
+        /* POPUP Styling */
         #modal-overlay {
             position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(3px); z-index: 100;
-            display: none; /* Dold från start */
-            align-items: center; justify-content: center;
+            display: none; align-items: center; justify-content: center;
             padding: 20px;
         }
 
@@ -118,15 +119,13 @@
 
         .close-btn {
             position: absolute; top: 15px; right: 15px; background: none; border: none;
-            font-size: 24px; color: var(--text-muted); cursor: pointer; padding: 0;
-            line-height: 1; transition: color 0.2s;
+            font-size: 24px; color: var(--text-muted); cursor: pointer;
         }
-        .close-btn:hover { color: #ef4444; }
 
         .modal-card h3 { margin: 0 0 15px 0; font-size: 20px; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 10px; }
         .stat-row { margin-bottom: 12px; }
-        .stat-label { font-weight: 600; color: var(--text-muted); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .stat-value { font-size: 15px; color: var(--text-main); margin-top: 2px; font-weight: 500;}
+        .stat-label { font-weight: 600; color: var(--text-muted); display: block; font-size: 11px; text-transform: uppercase; }
+        .stat-value { font-size: 15px; color: var(--text-main); margin-top: 2px; }
         .tags-container { display: flex; gap: 8px; margin-top: 4px; }
         .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; }
         .badge-verses { background: #dbeafe; color: #1d4ed8; }
@@ -153,7 +152,7 @@
         </div>
 
         <div class="stat-row" style="margin-top: 20px;">
-            <span class="stat-label">Total storlek (Hela kapitlet)</span>
+            <span class="stat-label">Total storlek</span>
             <div class="tags-container">
                 <span class="badge badge-verses" id="surah-verses">-</span>
                 <span class="badge badge-words" id="surah-words">-</span>
@@ -175,7 +174,6 @@
 
     colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f43f5e", "#84cc16", "#0ea5e9", "#eab308"]
 
-    # 1. DATABAS: ID | Namn | Betydelse | Plats | Verser | Ordantal
     surahs_raw_data = """
     1|Al-Fatihah|Öppningen|Mekka|7|29
     2|Al-Baqarah|Kon|Medina|286|6144
@@ -305,7 +303,6 @@
             "words": int(parts[5].strip())
         }
 
-    # 2. UPPDELNING PER JUZ
     juz_splits = [
         [(1, 29), (2, 2550)], [(2, 2550)], [(2, 1044), (3, 1500)], [(3, 1400), (4, 1100)], [(4, 1500)], 
         [(4, 1145), (5, 1400)], [(5, 1404), (6, 1100)], [(6, 1300), (7, 1250)], [(7, 1400), (8, 1150)], 
@@ -323,38 +320,30 @@
         [(78, 173), (79, 179), (80, 133), (81, 104), (82, 81), (83, 169), (84, 107), (85, 109), (86, 61), (87, 72), (88, 92), (89, 139), (90, 82), (91, 54), (92, 71), (93, 40), (94, 27), (95, 34), (96, 72), (97, 30), (98, 94), (99, 35), (100, 40), (101, 36), (102, 28), (103, 14), (104, 33), (105, 23), (106, 17), (107, 25), (108, 10), (109, 26), (110, 19), (111, 23), (112, 15), (113, 23), (114, 20)]
     ]
 
-    # --- LOGIK ---
     def open_modal(event):
-        surah_id = int(event.target.getAttribute("data-id"))
+        surah_id = int(event.currentTarget.getAttribute("data-id"))
         stats = surah_db.get(surah_id)
-        
-        # Uppdatera popupens innehåll
         document.querySelector("#surah-title").innerText = f"{surah_id}. {stats['name']}"
         document.querySelector("#surah-meaning").innerText = stats['meaning']
         document.querySelector("#surah-verses").innerText = f"{stats['verses']} verser"
         document.querySelector("#surah-words").innerText = f"{stats['words']} ord"
         document.querySelector("#surah-revelation").innerText = stats['revelation']
-        
-        # Visa popup
         document.querySelector("#modal-overlay").style.display = "flex"
 
     click_proxy = create_proxy(open_modal)
     container = document.querySelector("#quran-container")
 
-    # Bygg HTML
     for juz_index, surahs_in_juz in enumerate(juz_splits):
         total_words_in_juz = sum(words for surah_id, words in surahs_in_juz)
         
         row = js.document.createElement("div")
         row.className = "juz-row"
         
-        # Vänstra rutan med Juz-nummer
         label = js.document.createElement("div")
         label.className = "juz-label"
         label.innerText = f"{juz_index + 1}"
         row.appendChild(label)
         
-        # Behållare för själva färgsegmenten
         seg_container = js.document.createElement("div")
         seg_container.className = "segments-container"
         
@@ -362,18 +351,18 @@
             segment = js.document.createElement("div")
             segment.className = "surah-segment"
             
-            percentage_width = (word_count / total_words_in_juz) * 100
-            segment.style.width = f"{percentage_width}%"
+            # Använd grow, shrink och basis för exakt proportionell fördelning
+            segment.style.flex = f"{word_count} {word_count} 0%"
             segment.style.backgroundColor = colors[surah_id % len(colors)]
             
-            # Göm text om segmentet är pyttelitet (< 2.5% bredd) för att undvika överlappning
-            if percentage_width > 2.5:
+            perc = (word_count / total_words_in_juz) * 100
+            
+            # Visa text om bredden tillåter det (tröskel 5% för mobil-läsbarhet)
+            if perc > 5.0:
                 segment.innerText = surah_db[surah_id]["name"]
                 
-            segment.title = f"{surah_db[surah_id]['name']} ({word_count} ord här)"
             segment.setAttribute("data-id", str(surah_id))
             segment.addEventListener("click", click_proxy)
-            
             seg_container.appendChild(segment)
             
         row.appendChild(seg_container)
