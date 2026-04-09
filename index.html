@@ -83,7 +83,7 @@
             border-right: 1px solid rgba(255, 255, 255, 0.2); 
             transition: filter 0.2s;
             /* Auto-skalning av text */
-            font-size: clamp(9px, 1.2vw, 13px);
+            font-size: clamp(5px, 1.2vw, 13px);
             padding: 0 2px;
             text-align: center;
             word-wrap: break-word;
@@ -350,7 +350,7 @@
         # Vänstra rutan med Juz-nummer
         label = js.document.createElement("div")
         label.className = "juz-label"
-        label.innerText = f"J{juz_index + 1}"
+        label.innerText = f"{juz_index + 1}"
         row.appendChild(label)
         
         # Behållare för själva färgsegmenten
