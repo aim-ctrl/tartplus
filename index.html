@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koranen - Standard Madani (Fixad Font)</title>
+    
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212; 
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        #mushaf-container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            min-height: 80vh;
+        }
+
+        .mushaf-header {
+            display: flex;
+            justify-content: space-between;
+            color: #d1d5db;
+            font-size: 14px;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .quran-text {
+            font-family: 'QuranPageFont', sans-serif; 
+            font-size: 42px; 
+            line-height: 1.8;
+            text-align: center;
+            direction: rtl; 
+            word-wrap: break-word;
+            flex-grow: 1;
+        }
+
+        .mushaf-footer {
+            text-align: right;
+            color: #d1d5db;
+            font-size: 16px;
+            margin-top: 30px;
+            padding-top: 10px;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #2c2c2e;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+
+        button:hover {
+            background-color: #3a3a3c;
+        }
+    </style>
+    
+    <style id="dynamic-font-style"></style>
+
+</head>
+<body>
+
+    <div id="mushaf-container">
+        <div class="mushaf-header">
+            <span id="surah-name">Al-Baqarah</span>
+            <span id="juz-hizb">Juz 1 ◑ Hizb 1</span>
+        </div>
+
+        <div id="quran-content" class="quran-text">
+            <span style="font-family: Arial; font-size: 16px; color: #888;">Laddar text och font...</span>
+        </div>
+
+        <div class="mushaf-footer">
+            <span id="page-number">3</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button py-click="next_page">Nästa sida &rarr;</button>
+        <button py-click="prev_page">&larr; Föregående sida</button>
+    </div>
+
+    <script type="py">
+        import asyncio
+        from pyodide.http import pyfetch
+        from pyscript import document
+
+        current_page = 3
+
+        def update_font_for_page(page_num):
+            # ANVÄNDER QURAN.COMS OFFICIELLA WOFF2-FONTER (Mycket mer stabilt!)
+            font_url = f"https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/v1/woff2/p{page_num}.woff2"
+            
+            css_rule = f"""
+            @font-face {{
+                font-family: 'QuranPageFont';
+                src: url('{font_url}') format('woff2');
+                font-display: block;
+            }}
+            """
+            document.getElementById("dynamic-font-style").innerHTML = css_rule
+
+        async def fetch_and_display_page(page_num):
+            content_div = document.getElementById("quran-content")
+            document.getElementById("page-number").innerText = str(page_num)
+            
+            # 1. Applicera fonten
+            update_font_for_page(page_num)
+            
+            try:
+                # 2. Hämta V1-koderna (Standard Madani)
+                url = f"https://api.quran.com/api/v4/verses/by_page/{page_num}?words=true&word_fields=code_v1"
+                response = await pyfetch(url)
+                data = await response.json()
+                
+                page_html = ""
+                for verse in data['verses']:
+                    for word in verse['words']:
+                        if 'code_v1' in word:
+                            page_html += word['code_v1']
+                
+                content_div.innerHTML = page_html
+                
+            except Exception as e:
+                content_div.innerHTML = f"<p style='color: #ff6b6b; font-family: Arial; font-size: 16px;'>Kunde inte ladda: {str(e)}</p>"
+
+        def next_page(event):
+            global current_page
+            if current_page > 1:
+                current_page -= 1
+                asyncio.ensure_future(fetch_and_display_page(current_page))
+
+        def prev_page(event):
+            global current_page
+            if current_page < 604:
+                current_page += 1
+                asyncio.ensure_future(fetch_and_display_page(current_page))
+
+        # Starta
+        asyncio.ensure_future(fetch_and_display_page(current_page))
+    </script>
+
+</body>
+</html>
